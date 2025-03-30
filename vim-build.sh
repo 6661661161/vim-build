@@ -54,17 +54,18 @@ echo "Using tag: $TAG"
 # Download the source tarball
 TARBALL_URL="https://github.com/vim/vim/archive/refs/tags/${TAG}.tar.gz"
 echo "Downloading source from: $TARBALL_URL"
-curl -L -o vim.tar.gz "$TARBALL_URL"
+curl -L "$TARBALL_URL"
 
 # Extract the tarball
 echo "Extracting tarball..."
-tar -xzvf vim.tar.gz
+tar -xzvf $TAG.tar.gz
 
 # Determine the extracted directory (using the first entry in the tarball)
-EXTRACTED_DIR=$(tar -tzf vim.tar.gz | head -1 | cut -f1 -d"/")
+EXTRACTED_DIR=$(tar -tzf $TAG.tar.gz | head -1 | cut -f1 -d"/")
 echo "Changing to directory: $EXTRACTED_DIR"
 cd "$EXTRACTED_DIR"
 
+: '
 # Run configure with the specified options
 echo "Running configure with options: $CONFIG_OPTIONS"
 ./configure $CONFIG_OPTIONS
@@ -73,21 +74,33 @@ echo "Running configure with options: $CONFIG_OPTIONS"
 echo "Running make..."
 make
 
-# Create a Debian package using checkinstall
-echo "Creating Debian package with checkinstall..."
-if ! command -v checkinstall >/dev/null 2>&1; then
-  echo "checkinstall is not installed. Installing it now..."
-  sudo apt-get update
-  sudo apt-get install -y checkinstall
-fi
-
-# Remove the 'v' prefix if present for the package version
+# Create a Debian package using dpkg-deb
+echo "Creating Debian package with dpkg-deb..."
 PKG_VERSION="${TAG#v}"
-sudo checkinstall --pkgname=vim-custom --pkgversion=${PKG_VERSION} --backup=no --deldoc=yes --fstrans=no --default
+PKG_NAME="vim-custom_${PKG_VERSION}_amd64"
+BUILD_DIR="/tmp/${PKG_NAME}"
+
+# Prepare the directory structure for the package
+mkdir -p "${BUILD_DIR}/DEBIAN" "${BUILD_DIR}/usr"
+make DESTDIR="${BUILD_DIR}" install
+
+# Create the control file
+cat <<EOF > "${BUILD_DIR}/DEBIAN/control"
+Package: vim-custom
+Version: ${PKG_VERSION}
+Section: editors
+Priority: optional
+Architecture: amd64
+Maintainer: Your Name <your.email@example.com>
+Description: Custom build of Vim
+EOF
+
+# Build the package
+dpkg-deb --build "${BUILD_DIR}" "${PKG_NAME}.deb"
 
 # If the --install flag was provided, install the generated deb package
 if [ "$INSTALL_FLAG" = true ]; then
-  PACKAGE_NAME="vim-custom_${PKG_VERSION}_amd64.deb"
+  PACKAGE_NAME="${PKG_NAME}.deb"
   if [ -f "$PACKAGE_NAME" ]; then
     echo "Installing Debian package: $PACKAGE_NAME"
     sudo apt install ./"$PACKAGE_NAME"
@@ -96,5 +109,8 @@ if [ "$INSTALL_FLAG" = true ]; then
     exit 1
   fi
 fi
+
+# Clean up
+# rm -rf "${BUILD_DIR}"
 
 echo "All steps completed successfully."
