@@ -4,22 +4,34 @@ This repository contains a shell script (`vim-build.sh`) that automates the proc
 
 ## Features
 
-- **Automatic Tag Retrieval:** If no tag is provided, the script fetches the latest Vim tag from GitHub using the GitHub API.
-- **Source Download & Extraction:** Downloads the tarball for the specified tag and extracts it.
+- **Automatic Tag Retrieval:** If no tag is provided, the script fetches the latest Vim tag from GitHub.
 - **Custom Build:** Configures and builds Vim with user-defined `./configure` options.
-- **Deb Package Creation:** Uses [checkinstall](https://help.ubuntu.com/community/CheckInstall) to create a Debian package.
+- **Optional Deb Package Creation:** Creates a Debian package if the `--create-deb` option is specified.
 - **Optional Installation:** If the `--install` option is specified, the generated Debian package is automatically installed via `sudo apt install`.
 
 ## Requirements
 
-- `curl`
-- `tar`
+- `git`
 - `make`
-- `jq` (for retrieving the latest tag from GitHub)
-- `checkinstall` (the script will attempt to install it if missing)
-- `sudo` privileges
+- `dpkg-deb`
+- `sudo` privileges (for installation)
 
 ## Usage
 
 ```bash
-./vim-build.sh [--install] [--tag <tag>] [--config "<configure options>"]
+./vim-build.sh [--install] [--tag <tag>] [--config "<configure options>"] [--create-deb]
+```
+
+### Options
+
+- `--install`: Installs the generated Debian package (requires `--create-deb` to be specified).
+- `--tag <tag>`: Specifies the Vim version tag to build. If omitted, the latest tag is used.
+- `--config "<configure options>"`: Custom `./configure` options for building Vim.
+- `--create-deb`: Creates a Debian package for the built Vim.
+
+### Example
+
+```bash
+# Build Vim with default options, create a Debian package, and install it
+./vim-build.sh --create-deb --install
+```
